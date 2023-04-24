@@ -10,7 +10,7 @@ import classNames from 'classnames';
 import {Client4} from 'mattermost-redux/client';
 import {rudderAnalytics, RudderTelemetryHandler} from 'mattermost-redux/client/rudder';
 import {General} from 'mattermost-redux/constants';
-import {Theme, getUseCaseOnboarding} from 'mattermost-redux/selectors/entities/preferences';
+import {Theme} from 'mattermost-redux/selectors/entities/preferences';
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
 import {getCurrentUser, isCurrentUserSystemAdmin, checkIsFirstAdmin} from 'mattermost-redux/selectors/entities/users';
 import {setUrl} from 'mattermost-redux/actions/general';
@@ -87,6 +87,8 @@ import {UserProfile} from '@mattermost/types/users';
 import {ActionResult} from 'mattermost-redux/types/actions';
 
 import WelcomePostRenderer from 'components/welcome_post_renderer';
+
+import {getMyTeams} from 'mattermost-redux/selectors/entities/teams';
 
 import {applyLuxonDefaults} from './effects';
 
@@ -326,7 +328,7 @@ export default class Root extends React.PureComponent<Props, State> {
         }
 
         Utils.applyTheme(this.props.theme);
-    }
+    };
 
     componentDidUpdate(prevProps: Props) {
         if (!deepEqual(prevProps.theme, this.props.theme)) {
@@ -356,8 +358,8 @@ export default class Root extends React.PureComponent<Props, State> {
             return;
         }
 
-        const useCaseOnboarding = getUseCaseOnboarding(storeState);
-        if (!useCaseOnboarding) {
+        const myTeams = getMyTeams(storeState);
+        if (myTeams.length > 0) {
             GlobalActions.redirectUserToDefaultTeam();
             return;
         }
@@ -421,7 +423,7 @@ export default class Root extends React.PureComponent<Props, State> {
         }
 
         this.onConfigLoaded();
-    }
+    };
 
     componentDidMount() {
         this.mounted = true;
@@ -493,7 +495,7 @@ export default class Root extends React.PureComponent<Props, State> {
             }
             window.addEventListener('focus', reloadOnFocus);
         }
-    }
+    };
 
     handleWindowResizeEvent = throttle(() => {
         this.props.actions.emitBrowserWindowResized();
@@ -503,7 +505,7 @@ export default class Root extends React.PureComponent<Props, State> {
         if (e.matches) {
             this.updateWindowSize();
         }
-    }
+    };
 
     setRootMeta = () => {
         const root = document.getElementById('root')!;
@@ -515,7 +517,7 @@ export default class Root extends React.PureComponent<Props, State> {
         })) {
             root.classList.toggle(className, enabled);
         }
-    }
+    };
 
     updateWindowSize = () => {
         switch (true) {
@@ -532,7 +534,7 @@ export default class Root extends React.PureComponent<Props, State> {
             this.props.actions.emitBrowserWindowResized(WindowSizes.MOBILE_VIEW);
             break;
         }
-    }
+    };
 
     render() {
         if (!this.state.configLoaded) {
@@ -644,6 +646,23 @@ export default class Root extends React.PureComponent<Props, State> {
                         <TeamSidebar/>
                         <DelinquencyModalController/>
                         <Switch>
+                            {this.props.products?.filter((product) => Boolean(product.publicComponent)).map((product) => (
+                                <Route
+                                    key={`${product.id}-public`}
+                                    path={`${product.baseURL}/public`}
+                                    render={(props) => {
+                                        return (
+                                            <Pluggable
+                                                pluggableName={'Product'}
+                                                subComponentName={'publicComponent'}
+                                                pluggableId={product.id}
+                                                css={{gridArea: 'center'}}
+                                                {...props}
+                                            />
+                                        );
+                                    }}
+                                />
+                            ))}
                             {this.props.products?.map((product) => (
                                 <Route
                                     key={product.id}
